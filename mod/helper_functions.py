@@ -1,12 +1,12 @@
 import math
-from scipy.special import binom#born per day
+from scipy.special import binom
 
-def return_b():
+def return_b(): #born per day
     litter_prod = 2.5/365 #per day
     ind_per_litter = 7
     return litter_prod*ind_per_litter/2 
 
-#def per day as a lifespan result
+#Death per day as a lifespan result
 def return_d():
     lifespan = 1/(2*365)
     return lifespan
