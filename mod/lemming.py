@@ -6,10 +6,13 @@ class Lemming:
         self.toughness = 5
         self.last_eaten = 0
 
-    def check_dead(self):
+    def check_dead(self, death_probability = None):
         # Calculate the probability of death for a given day
-        death_probability = 365*2  # Adjust the constant as needed
-        return random.random() < self.age/death_probability
+        
+        if death_probability is None:
+            death_probability = self.age/365*2  # Adjust the constant as needed
+
+        return random.random() < death_probability
         
     def check_reproduce(self):
         givebirth_porp = 2.5/(365*2)
@@ -18,11 +21,13 @@ class Lemming:
         else:
             return 0
         
-    def check_food(self,N):
-        if N <= 75:
+    def check_food(self,N, food = 75):
+        
+
+        if N <= food:
             return True
         else:
-            prop_food = 75/N
+            prop_food = food/N
             if random.random() < prop_food:
                 return True
             else:
