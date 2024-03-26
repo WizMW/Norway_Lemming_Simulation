@@ -16,13 +16,8 @@ def population_balance(t, N):
 N_INIT = 500
 SIM_TIME = 3 * 365
 
-# Parameter definitions
-save_interval = 200                   # Save interval [s]
 
-# Start at t_0 go with save_interval steps until t_end is reached
-t_save = np.arange(0, SIM_TIME, save_interval)
-
-sol = solve_ivp(fun=population_balance, t_span=(0, SIM_TIME), y0=np.array([N_INIT,]),
+sol = solve_ivp(fun=population_balance, t_span=(0, SIM_TIME), y0=np.array([N_INIT]),
                 method='RK45')
 
 # Plot the solution
@@ -70,25 +65,44 @@ plt.savefig('./exp/part2.png', dpi=300)
 
 
 # %% Part 3
-
-data = np.load('data/f_sd_T.npy', allow_pickle=True).item()
-
-
-# mod.fit_d_sd()
-r = mod.get_d(0.18, data=None)
-
 # mod.fit_f_sd_T()
-F = mod.get_f(0.18, 0.104167, data=None)
+# mod.fit_d_sd()
+
+
+def population_balance(t, N):
+
+    snow_depth, temp = mod.get_weather("01-01", t)
+
+    food = mod.get_f(snow_depth, temp)
+    death_rate = mod.get_d(snow_depth)
+
+    if death_rate < mod.return_d():
+        death_rate = mod.return_d()
+
+    dNdt = N * (mod.return_b() - death_rate - mod.return_f(N, food))
+
+    return dNdt
+
+
+sol = solve_ivp(fun=population_balance, t_span=(0, SIM_TIME), y0=np.array([N_INIT], ),
+                method='RK45')
+
 
 L = [Lemming() for _ in range(N_INIT)]
 lemming_population = np.empty(1)
+
 for day in range(SIM_TIME):
 
-    mod.get_weather("01-01", dayt)
+    snow_depth, temp = mod.get_weather("01-01", day)
     current_population = len(L)
     new_lemmings = []
+    death_prop_model = mod.get_d(snow_depth)
+    food_model = mod.get_f(snow_depth, temp)
+
     for lemming in L:
-        alive, reproduce = lemming.live_a_day(current_population)
+
+        alive, reproduce = lemming.live_a_day(
+            current_population, death_prop_model, food_model)
         if alive:
             new_lemmings.append(lemming)
         for _ in range(reproduce):
@@ -96,7 +110,18 @@ for day in range(SIM_TIME):
     L = new_lemmings
     lemming_population = np.append(lemming_population, len(L))
 
+fig, ax = plt.subplots(figsize=(17/2.54, 10/2.54))
+fig, ax = plt.subplots(figsize=(17/2.54, 10/2.54))
+ax.plot(sol.t, sol.y[0], label='Part 1 with data model')
+ax.plot(lemming_population, label='Part 2 with data model')
+ax.set_xlabel('Time (days)')
+ax.set_ylabel('Population')
+ax.legend()
 
+font_properties = {'family': 'Arial', 'size': 11}
+plt.rc('font', **font_properties)
+
+plt.savefig('./exp/part3.png', dpi=300)
 
 
 # %%

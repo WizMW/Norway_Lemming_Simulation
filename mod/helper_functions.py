@@ -30,8 +30,7 @@ def return_d():
     Returns:
         float: The number of death per day.
     """
-    lifespan = 1/(2*365)
-    return lifespan
+    return 1/(2*365)
 
 # Death as a result of starvation
 
@@ -50,52 +49,33 @@ def return_f(N, F = 75):
 
 def get_weather(start_date, t):
 
-    data = np.load('data\weather_data.npy', allow_pickle=True).item()
+    data = np.load('data/weather_data.npy', allow_pickle=True).item()
     month = data['month']
     day = data['day']
     snow = data['snow']
     temp = data['temp']
+
     month_convert = np.array(month, int)
     snow_convert = np.array(snow, float)
     temp_convert = np.array(temp, float)
 
-
-
-    if t > 364:
-        exit()
-
-    date_check = start_date.split("-", 1)
-
-    if int(date_check[0]) >= 11:
-        current_year = "2022"
-    else:
-        current_year = "2023"
-
     date_format = "%m-%d"
-    date = datetime.strptime(
-        start_date + '-' + current_year, date_format + '-%Y')
+    date = datetime.strptime(start_date, date_format)
     temp = date + timedelta(days=t)
     new_date = temp.strftime(date_format)
-
-    tempdate = datetime.strptime("11-01-2023", date_format + '-%Y')
-    tempdate2 = datetime.strptime("10-31-2022", date_format + '-%Y')
-
-    if temp >= tempdate or temp <= tempdate2:
-        print("date is out of bound")
-        sys.exit(0)
 
     if new_date == "02-29":
         new_date = "02-28"
 
-    month_index = new_date.split("-", 1)
+    month_index = new_date.split("-",1)
 
     i = 0
     while month[i] != month_index[0]:
         i += 1
 
-    index = i + int(month_index[1]) - 1
-    data_values = np.array([snow_convert[index], temp_convert[index]])
-    return data_values
+    index = i + int(month_index[1]) -1
+    snow_depth, temp = np.array([snow_convert[index], temp_convert[index]])
+    return snow_depth, temp
 
 
 def function(x, L, k, x0):
@@ -131,6 +111,9 @@ def fit_d_sd():
 
 def get_d(snow_depth, data=None):
 
+
+
+
     if data is None:
         data = np.load('data/fit_d_sd_parameters.npy', allow_pickle=True)
     
@@ -152,59 +135,57 @@ def load_data():
 def fit_f_sd_T():
 
     X, Y, Z = load_data()
-
+    
     X = X.reshape(-1, 1)
     Y = Y.reshape(-1, 1)
     Z = Z.reshape(-1, 1)
 
     matrix = np.concatenate((X, Y), axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(
-        matrix, Z, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(matrix, Z, test_size=0.2, random_state=42)
 
-    mlp_regressor = MLPRegressor(hidden_layer_sizes=(
-        100, 100), activation='relu', solver='adam', alpha=0.001, max_iter=2000, random_state=1)
+    mlp_regressor = MLPRegressor(hidden_layer_sizes=(100, 100), activation='relu', solver='adam',alpha=0.001, max_iter=2000, random_state=1)
     y_temp = y_train.ravel()
     mlp_regressor.fit(X_train, y_temp)
     print('It took', mlp_regressor.n_iter_, 'iterations to fit the MLP model!')
 
-    y_test_pred = mlp_regressor.predict(X_test)
+    z_pred = mlp_regressor.predict(X_test)
+   
+    squared_error = mean_squared_error(y_test, z_pred)
+    absolute_error = mean_absolute_error(y_test, z_pred)
 
-    squared_error = mean_squared_error(y_test, y_test_pred)
-    absolute_error = mean_absolute_error(y_test, y_test_pred)
+    score = mlp_regressor.score(X_train, y_train)
 
     fig = plt.figure(figsize=(10, 6))
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(X_train[:, 0], X_train[:, 1], y_train,
-               color='blue', label='Train Data')
-    ax.scatter(X_test[:, 0], X_test[:, 1], y_test_pred,
-               color='red', label='Test Data')
+    ax.scatter(X_train[:, 0], X_train[:, 1], y_train, color='blue', label='Train Data')
+    ax.scatter(X_test[:, 0], X_test[:, 1], y_test, color='red', label='Test Data')
 
-    ax.set_title('Non-linear Regression with MLP Regressor')
     ax.set_xlabel('Snow Depth', fontsize=9)
     ax.set_ylabel('Temperature', fontsize=9)
     ax.set_zlabel('Food for N lemmings', fontsize=9)
-    ax.set_title(f"Squared Error: {
-                 squared_error:.3f} / Absolute Error: {absolute_error:.3f}", fontsize=8)
+    ax.set_title(f"Squared Error: {squared_error:.2f} / Absolute Error: {absolute_error:.2f} / Score: {score:.2f}", fontsize=8)
     ax.grid(True)
     ax.legend()
     plt.savefig('exp/f_sd_T_fit.png', dpi=1200)
-    np.save('data/model_f.npy', mlp_regressor, allow_pickle=True)
+    np.save('data/model_f', mlp_regressor, allow_pickle=True)
 
 
 
 
 def get_f(snow_depth, temp, data=None):
 
-    food_model = data
 
-
-    if food_model is None:
-        food_model = np.load("data/model_f.npy", allow_pickle=True).item() 
-
-    snow_depth_array = np.array(snow_depth).reshape(-1, 1)
-    temp_array = np.array(temp).reshape(-1, 1)
-
-    # Kombinieren der Arrays
-    input_data = np.concatenate((snow_depth_array, temp_array), axis=1)
-    food = food_model.predict(input_data)
-    return food
+    if snow_depth > 1 or snow_depth < 0.002002002002002002:
+        print("snow_depth is outside the calibrated range of values")
+        
+    if temp > 30 or temp < -29.81981981981982:
+        print("temperature is outside the calibrated range of values")
+    
+    if data is None:
+        food_model = np.load('data/model_f.npy', allow_pickle=True).item()
+        food = food_model.predict(np.array([[snow_depth, temp]]))
+        return food
+    else:
+        food_model = data
+        food = food_model.predict(np.array([[snow_depth, temp]]))
+        return food

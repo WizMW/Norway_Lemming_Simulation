@@ -1,29 +1,26 @@
 import random
 
+
 class Lemming:
     def __init__(self):
         self.age = 0
         self.toughness = 5
         self.last_eaten = 0
 
-    def check_dead(self, death_probability = None):
+    def check_dead(self, death_probability):
         # Calculate the probability of death for a given day
-        
         if death_probability is None:
-            death_probability = self.age/365*2  # Adjust the constant as needed
-
+            death_probability = self.age/(365*2)  # Adjust the constant as needed
         return random.random() < death_probability
-        
+
     def check_reproduce(self):
         givebirth_porp = 2.5/(365*2)
         if random.random() < givebirth_porp:
             return 7
         else:
             return 0
-        
-    def check_food(self,N, food = 75):
-        
 
+    def check_food(self, N, food):
         if N <= food:
             return True
         else:
@@ -33,11 +30,21 @@ class Lemming:
             else:
                 return False
 
-    def live_a_day(self,N):
+    def live_a_day(self, N, death_probability=None, food=75):
         # Check if the lemming survives the day
-        alive = not self.check_dead()
+
+
+        if death_probability is not None:
+            if death_probability > self.age/(365*2):
+                alive = not self.check_dead(death_probability)
+            else: 
+                 alive = not self.check_dead(self.age/(365*2))   
+        else:
+            alive = not self.check_dead(death_probability)
+
+
         reproduce = self.check_reproduce()
-        if not self.check_food(N):
+        if not self.check_food(N, food):
             self.last_eaten += 1
         else:
             self.last_eaten = 0
@@ -47,5 +54,3 @@ class Lemming:
         else:
             reproduce = 0
             return alive, reproduce
-
-
